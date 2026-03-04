@@ -32,6 +32,7 @@ Open [http://localhost:5173](http://localhost:5173), then click **Microphone** o
 
 To capture system audio on macOS install a virtual audio device (e.g. BlackHole or Loopback) and select it as the microphone source.
 
+
 ## Stack
 
 - [Three.js](https://threejs.org/) — 3D rendering + UnrealBloom post-processing
