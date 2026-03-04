@@ -1,0 +1,213 @@
+/* ── Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: #000;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  color: #fff;
+}
+
+/* ── App shell ─────────────────────────────────────────────── */
+#app {
+  position: relative;
+  width: 100vw; height: 100vh;
+}
+
+#visualizer-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+
+/* ── HUD ────────────────────────────────────────────────────── */
+#hud {
+  position: absolute;
+  top: 20px; left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 210px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.35);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: auto;
+  z-index: 10;
+}
+
+#hud.visible { opacity: 1; }
+
+#hud-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: 0;
+  color: rgba(255,255,255,0.88);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+}
+
+#hud-toggle .chevron {
+  opacity: 0.75;
+  transition: transform 0.2s ease;
+}
+
+#hud.expanded #hud-toggle .chevron {
+  transform: rotate(180deg);
+}
+
+#hud-body {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+#hud.expanded #hud-body {
+  display: flex;
+}
+
+#mood-display, #bpm-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+#mood-label, #bpm-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  opacity: 0.5;
+  font-weight: 600;
+}
+
+#mood-value, #bpm-value {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  transition: color 0.8s ease;
+}
+
+#energy-bar-container {
+  width: 120px;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+#energy-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #4fc3f7, #e040fb);
+  transition: width 0.1s ease, background 0.8s ease;
+}
+
+/* ── Start screen ─────────────────────────────────────────── */
+#start-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(10,10,30,0.95) 0%, #000 100%);
+  z-index: 100;
+  transition: opacity 0.8s ease;
+}
+
+#start-screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#start-content {
+  text-align: center;
+  max-width: 480px;
+  padding: 0 24px;
+}
+
+#start-content h1 {
+  font-size: clamp(28px, 5vw, 48px);
+  font-weight: 800;
+  letter-spacing: 6px;
+  background: linear-gradient(135deg, #e040fb, #4fc3f7, #e040fb);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShift 4s ease infinite;
+  margin-bottom: 12px;
+}
+
+#start-content > p {
+  font-size: 14px;
+  opacity: 0.5;
+  margin-bottom: 40px;
+  line-height: 1.5;
+}
+
+#input-options {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.input-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 32px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  min-width: 130px;
+}
+
+.input-btn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.3);
+  transform: translateY(-2px);
+}
+
+.input-btn:active { transform: translateY(0); }
+
+.input-btn svg {
+  width: 28px; height: 28px;
+  opacity: 0.8;
+}
+
+#start-hint {
+  font-size: 11px;
+  opacity: 0.3;
+  margin-top: 12px;
+}
+
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}

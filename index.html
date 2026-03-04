@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Better Visualizer</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="visualizer-canvas"></canvas>
+
+    <!-- HUD overlay -->
+    <div id="hud">
+      <button id="hud-toggle" type="button" aria-expanded="false" aria-controls="hud-body">
+        <span>Stats</span>
+        <span class="chevron">▾</span>
+      </button>
+      <div id="hud-body">
+        <div id="mood-display">
+          <span id="mood-label">MOOD</span>
+          <span id="mood-value">—</span>
+        </div>
+        <div id="energy-bar-container">
+          <div id="energy-bar"></div>
+        </div>
+        <div id="bpm-display">
+          <span id="bpm-label">BPM</span>
+          <span id="bpm-value">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Start screen -->
+    <div id="start-screen">
+      <div id="start-content">
+        <h1>BETTER VISUALIZER</h1>
+        <p>ML-powered music visualizer with real-time mood detection</p>
+        <div id="input-options">
+          <button id="btn-mic" class="input-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+            Microphone
+          </button>
+          <label id="btn-file" class="input-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18V5l12-2v13"/>
+              <circle cx="6" cy="18" r="3"/>
+              <circle cx="18" cy="16" r="3"/>
+            </svg>
+            Audio File
+            <input type="file" id="file-input" accept="audio/*" hidden />
+          </label>
+        </div>
+        <p id="start-hint">Capture system audio by selecting a virtual audio device</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
