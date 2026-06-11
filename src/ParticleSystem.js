@@ -209,7 +209,8 @@ export class ParticleSystem {
 function rng(lo, hi) { return lo + Math.random() * (hi - lo); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 
-// Cheap scalar noise using sine hash
+// Cheap scalar noise using sine hash – returns [0, 1)
 function noise(x) {
-  return (Math.sin(x * 127.1 + 311.7) * 43758.5453) % 1;
+  const v = Math.sin(x * 127.1 + 311.7) * 43758.5453;
+  return v - Math.floor(v);
 }
