@@ -115,7 +115,7 @@ btnMic.addEventListener('click', async () => {
     await audio.startMic();
     startVisualizer();
   } catch (err) {
-    btnMic.innerHTML = `❌ ${err.message}`;
+    btnMic.textContent = `❌ ${err.message}`;
     setTimeout(() => location.reload(), 3000);
   }
 });
