@@ -1,11 +1,11 @@
 # better-visualizer
 
-> ML-powered music visualizer with real-time mood detection and physics-based fluid visuals. Inspired by the Apple Music/iTunes visualizer — but smarter and more customizable.
+> Music visualizer with real-time mood detection and physics-based fluid visuals. Inspired by the Apple Music/iTunes visualizer — but smarter and more customizable.
 
 ## Features
 
 - **Real-time audio** – microphone input or drop any audio file
-- **ML mood detection** – Meyda extracts perceptual audio features (energy, spectral centroid, MFCCs, chroma, ZCR, flux) every ~512 samples; a weighted classifier maps them onto 6 mood archetypes in real time
+- **Mood detection** – Meyda extracts perceptual audio features (energy, spectral centroid, MFCCs, chroma, ZCR, flux) every ~512 samples; a weighted classifier maps them onto 6 mood archetypes in real time
 - **Adaptive theming** – colour palette, bloom intensity, particle speed, and trail decay all smoothly transition based on detected mood
 - **Physics particle system** – 2 200 particles with spring-orbit forces, frequency-band attractors, vortex, turbulence, and beat-triggered shockwaves
 - **Three.js renderer + post-processing** – UnrealBloomPass gives the iconic iTunes glow; frequency ring, waveform ribbon, and pulsing center orb complete the scene
