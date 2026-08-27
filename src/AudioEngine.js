@@ -28,6 +28,7 @@ export class AudioEngine {
     this.beatAnalyser = null;
     this.meydaAnalyser = null;
     this.sink = null;
+    this._micStream = null;
 
     // Raw FFT buffers
     this.frequencyData = new Uint8Array(FFT_SIZE / 2);
@@ -132,7 +133,10 @@ export class AudioEngine {
     // ctx already created & resumed by startMic()
     const source = this.ctx.createMediaStreamSource(stream);
     // Mic input must NOT be routed to the speakers, or it feeds back.
+    // _initFromNode tears down the previous graph (and any prior mic stream)
+    // first, so remember this stream only afterwards for the next teardown.
     this._initFromNode(source, false);
+    this._micStream = stream;
   }
 
   _initFromNode(sourceNode, toDestination = false) {
@@ -197,6 +201,15 @@ export class AudioEngine {
   _teardown() {
     if (this.meydaAnalyser) {
       try { this.meydaAnalyser.stop(); } catch { /* already stopped */ }
+    }
+    // Release the microphone: disconnecting the source node is not enough, the
+    // underlying MediaStream tracks keep capture (and the privacy indicator)
+    // active until explicitly stopped.
+    if (this._micStream) {
+      for (const track of this._micStream.getTracks()) {
+        try { track.stop(); } catch { /* already stopped */ }
+      }
+      this._micStream = null;
     }
     // A file BufferSource keeps looping until stopped; a mic source has no stop().
     if (this.source && typeof this.source.stop === 'function') {
