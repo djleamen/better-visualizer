@@ -27,6 +27,7 @@ export class AudioEngine {
     this.analyser = null;
     this.beatAnalyser = null;
     this.meydaAnalyser = null;
+    this.sink = null;
 
     // Raw FFT buffers
     this.frequencyData = new Uint8Array(FFT_SIZE / 2);
@@ -142,9 +143,15 @@ export class AudioEngine {
     this.analyser.fftSize = FFT_SIZE;
     this.analyser.smoothingTimeConstant = 0.75;  // for visuals
     sourceNode.connect(this.analyser);
-    // Only play the audio out for file playback; the analyser still runs
-    // for visuals without being connected to the destination.
-    if (toDestination) this.analyser.connect(this.ctx.destination);
+    // Route the analyser to the destination through a gain node. The graph
+    // must stay connected to a sink so the render thread keeps pulling audio
+    // (otherwise the analysers/Meyda can stop producing data). For file
+    // playback we pass the audio through (gain 1); for microphone input we
+    // mute it (gain 0) so it is analysed without feeding back to the speakers.
+    this.sink = this.ctx.createGain();
+    this.sink.gain.value = toDestination ? 1 : 0;
+    this.analyser.connect(this.sink);
+    this.sink.connect(this.ctx.destination);
 
     // Separate analyser with low smoothing for crisp beat detection
     this.beatAnalyser = this.ctx.createAnalyser();
