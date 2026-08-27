@@ -136,6 +136,11 @@ export class AudioEngine {
   }
 
   _initFromNode(sourceNode, toDestination = false) {
+    // Tear down any previous graph first, so re-selecting mic/file does not
+    // leave the old source playing or stack duplicate nodes on ctx.destination.
+    const wasStarted = this._started;
+    this._teardown();
+
     this.source = sourceNode;
 
     // Analyser for raw FFT
@@ -185,7 +190,24 @@ export class AudioEngine {
     this.meydaAnalyser.start();
 
     this._started = true;
-    this._tick();
+    // Only one render loop should run; re-init reuses the existing one.
+    if (!wasStarted) this._tick();
+  }
+
+  _teardown() {
+    if (this.meydaAnalyser) {
+      try { this.meydaAnalyser.stop(); } catch { /* already stopped */ }
+    }
+    // A file BufferSource keeps looping until stopped; a mic source has no stop().
+    if (this.source && typeof this.source.stop === 'function') {
+      try { this.source.stop(); } catch { /* already stopped */ }
+    }
+    for (const node of [this.source, this.analyser, this.beatAnalyser, this.sink]) {
+      if (node) {
+        try { node.disconnect(); } catch { /* not connected */ }
+      }
+    }
+    this.meydaAnalyser = null;
   }
 
   _tick() {
