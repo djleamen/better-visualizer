@@ -82,7 +82,7 @@ export class AudioEngine {
     const source = this.ctx.createBufferSource();
     source.buffer = audioBuffer;
     source.loop = true;
-    this._initFromNode(source);
+    this._initFromNode(source, true);
     source.start(0);
   }
 
@@ -130,10 +130,11 @@ export class AudioEngine {
   _initFromStream(stream) {
     // ctx already created & resumed by startMic()
     const source = this.ctx.createMediaStreamSource(stream);
-    this._initFromNode(source);
+    // Mic input must NOT be routed to the speakers, or it feeds back.
+    this._initFromNode(source, false);
   }
 
-  _initFromNode(sourceNode) {
+  _initFromNode(sourceNode, toDestination = false) {
     this.source = sourceNode;
 
     // Analyser for raw FFT
@@ -141,7 +142,9 @@ export class AudioEngine {
     this.analyser.fftSize = FFT_SIZE;
     this.analyser.smoothingTimeConstant = 0.75;  // for visuals
     sourceNode.connect(this.analyser);
-    this.analyser.connect(this.ctx.destination);
+    // Only play the audio out for file playback; the analyser still runs
+    // for visuals without being connected to the destination.
+    if (toDestination) this.analyser.connect(this.ctx.destination);
 
     // Separate analyser with low smoothing for crisp beat detection
     this.beatAnalyser = this.ctx.createAnalyser();
