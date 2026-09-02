@@ -27,6 +27,8 @@ export class AudioEngine {
     this.analyser = null;
     this.beatAnalyser = null;
     this.meydaAnalyser = null;
+    this.sink = null;
+    this._micStream = null;
 
     // Raw FFT buffers
     this.frequencyData = new Uint8Array(FFT_SIZE / 2);
@@ -82,7 +84,7 @@ export class AudioEngine {
     const source = this.ctx.createBufferSource();
     source.buffer = audioBuffer;
     source.loop = true;
-    this._initFromNode(source);
+    this._initFromNode(source, true);
     source.start(0);
   }
 
@@ -130,10 +132,19 @@ export class AudioEngine {
   _initFromStream(stream) {
     // ctx already created & resumed by startMic()
     const source = this.ctx.createMediaStreamSource(stream);
-    this._initFromNode(source);
+    // Mic input must NOT be routed to the speakers, or it feeds back.
+    // _initFromNode tears down the previous graph (and any prior mic stream)
+    // first, so remember this stream only afterwards for the next teardown.
+    this._initFromNode(source, false);
+    this._micStream = stream;
   }
 
-  _initFromNode(sourceNode) {
+  _initFromNode(sourceNode, toDestination = false) {
+    // Tear down any previous graph first, so re-selecting mic/file does not
+    // leave the old source playing or stack duplicate nodes on ctx.destination.
+    const wasStarted = this._started;
+    this._teardown();
+
     this.source = sourceNode;
 
     // Analyser for raw FFT
@@ -141,7 +152,15 @@ export class AudioEngine {
     this.analyser.fftSize = FFT_SIZE;
     this.analyser.smoothingTimeConstant = 0.75;  // for visuals
     sourceNode.connect(this.analyser);
-    this.analyser.connect(this.ctx.destination);
+    // Route the analyser to the destination through a gain node. The graph
+    // must stay connected to a sink so the render thread keeps pulling audio
+    // (otherwise the analysers/Meyda can stop producing data). For file
+    // playback we pass the audio through (gain 1); for microphone input we
+    // mute it (gain 0) so it is analysed without feeding back to the speakers.
+    this.sink = this.ctx.createGain();
+    this.sink.gain.value = toDestination ? 1 : 0;
+    this.analyser.connect(this.sink);
+    this.sink.connect(this.ctx.destination);
 
     // Separate analyser with low smoothing for crisp beat detection
     this.beatAnalyser = this.ctx.createAnalyser();
@@ -175,7 +194,33 @@ export class AudioEngine {
     this.meydaAnalyser.start();
 
     this._started = true;
-    this._tick();
+    // Only one render loop should run; re-init reuses the existing one.
+    if (!wasStarted) this._tick();
+  }
+
+  _teardown() {
+    if (this.meydaAnalyser) {
+      try { this.meydaAnalyser.stop(); } catch { /* already stopped */ }
+    }
+    // Release the microphone: disconnecting the source node is not enough, the
+    // underlying MediaStream tracks keep capture (and the privacy indicator)
+    // active until explicitly stopped.
+    if (this._micStream) {
+      for (const track of this._micStream.getTracks()) {
+        try { track.stop(); } catch { /* already stopped */ }
+      }
+      this._micStream = null;
+    }
+    // A file BufferSource keeps looping until stopped; a mic source has no stop().
+    if (this.source && typeof this.source.stop === 'function') {
+      try { this.source.stop(); } catch { /* already stopped */ }
+    }
+    for (const node of [this.source, this.analyser, this.beatAnalyser, this.sink]) {
+      if (node) {
+        try { node.disconnect(); } catch { /* not connected */ }
+      }
+    }
+    this.meydaAnalyser = null;
   }
 
   _tick() {
