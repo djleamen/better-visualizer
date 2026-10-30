@@ -45,7 +45,7 @@
             </svg>
             Microphone
           </button>
-          <label id="btn-file" class="input-btn">
+          <label id="btn-file" class="input-btn" tabindex="0" role="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 18V5l12-2v13"/>
               <circle cx="6" cy="18" r="3"/>
@@ -55,7 +55,7 @@
             <input type="file" id="file-input" accept="audio/*" hidden />
           </label>
         </div>
-        <p id="start-hint">Capture system audio by selecting a virtual audio device</p>
+        <p id="start-hint" aria-live="polite">Or drop an audio file anywhere · capture system audio with a virtual audio device</p>
       </div>
     </div>
   </div>

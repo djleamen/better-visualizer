@@ -110,13 +110,17 @@ function startVisualizer() {
 btnMic.addEventListener('click', async () => {
   // Prime AudioContext SYNCHRONOUSLY during the user gesture
   audio.primeContext();
+  const label = btnMic.innerHTML;
   btnMic.textContent = 'Connecting…';
   try {
     await audio.startMic();
     startVisualizer();
   } catch (err) {
-    btnMic.textContent = `❌ ${err.message}`;
-    setTimeout(() => location.reload(), 3000);
+    // Keep the user on the start screen with a reason instead of reloading.
+    btnMic.innerHTML = label;
+    startHint.textContent = err.name === 'NotAllowedError'
+      ? '❌ Microphone access was blocked — allow it in your browser and try again.'
+      : `❌ ${err.message}`;
   }
 });
 
@@ -125,14 +129,46 @@ btnFile.addEventListener('click', () => {
   audio.primeContext();
 });
 
-fileInput.addEventListener('change', async (e) => {
-  const file = e.target.files?.[0];
+// The file button is a <label>; make it reachable and operable by keyboard.
+btnFile.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    audio.primeContext();
+    fileInput.click();
+  }
+});
+
+async function loadFile(file) {
   if (!file) return;
   startHint.textContent = `Loading “${file.name}”…`;
   try {
     await audio.startFile(file);
     startVisualizer();
+    startHint.textContent = 'Drop another audio file anytime to switch tracks';
   } catch (err) {
-    startHint.textContent = `❌ ${err.message}`;
+    startHint.textContent = `❌ Couldn't play “${file.name}”: ${err.message}`;
   }
+}
+
+fileInput.addEventListener('change', (e) => loadFile(e.target.files?.[0]));
+
+// Drag & drop an audio file anywhere — on the start screen or mid-session to
+// switch tracks (AudioEngine tears down the previous source on re-init).
+window.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  document.body.classList.add('dragging');
+});
+window.addEventListener('dragleave', (e) => {
+  if (!e.relatedTarget) document.body.classList.remove('dragging');
+});
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
+  document.body.classList.remove('dragging');
+  const file = [...(e.dataTransfer?.files ?? [])].find((f) => f.type.startsWith('audio/'));
+  if (!file) {
+    startHint.textContent = '❌ That doesn\'t look like an audio file';
+    return;
+  }
+  audio.primeContext();
+  loadFile(file);
 });
