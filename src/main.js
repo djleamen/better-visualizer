@@ -23,6 +23,7 @@ const btnMic      = document.getElementById('btn-mic');
 const btnFile     = document.getElementById('btn-file');
 const fileInput   = document.getElementById('file-input');
 const startHint   = document.getElementById('start-hint');
+const toast       = document.getElementById('toast');
 
 /* ── Subsystems ──────────────────────────────────────────────── */
 const audio     = new AudioEngine();
@@ -96,13 +97,33 @@ function updateHUD(state) {
 }
 
 /* ── Start ───────────────────────────────────────────────────── */
+// The start-screen hint is invisible once playback starts; mid-session
+// messages go to a transient toast instead.
+let toastTimer = 0;
+function notify(message) {
+  if (!running) {
+    startHint.textContent = message;
+    return;
+  }
+  toast.textContent = message;
+  toast.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 4000);
+}
+
 function startVisualizer() {
+  if (running) return; // switching tracks reuses the loop already running
   running  = true;
   lastTime = performance.now();
 
   startScreen.classList.add('hidden');
+  // `.hidden` only fades it out; make it inert so its controls (the Audio File
+  // label is focusable) leave the tab order and can't be focused invisibly.
+  startScreen.inert = true;
   hud.classList.add('visible');
   setHudExpanded(false);
+  // Move focus off the now-hidden start screen onto a visible control.
+  hudToggle?.focus();
 
   requestAnimationFrame(loop);
 }
@@ -110,13 +131,24 @@ function startVisualizer() {
 btnMic.addEventListener('click', async () => {
   // Prime AudioContext SYNCHRONOUSLY during the user gesture
   audio.primeContext();
+  const label = btnMic.innerHTML;
   btnMic.textContent = 'Connecting…';
+  // Disable while the permission prompt is open so an overlapping click can't
+  // capture "Connecting…" as the label to restore, and so the label is always
+  // restored (including when the request is superseded by a newer pick).
+  btnMic.disabled = true;
   try {
-    await audio.startMic();
-    startVisualizer();
+    if (await audio.startMic()) startVisualizer();
+    // A false result means a newer pick superseded this one and is handling
+    // the UI; just fall through to restore the button below.
   } catch (err) {
-    btnMic.textContent = `❌ ${err.message}`;
-    setTimeout(() => location.reload(), 3000);
+    // Keep the user on the start screen with a reason instead of reloading.
+    startHint.textContent = err.name === 'NotAllowedError'
+      ? '❌ Microphone access was blocked — allow it in your browser and try again.'
+      : `❌ ${err.message}`;
+  } finally {
+    btnMic.innerHTML = label;
+    btnMic.disabled = false;
   }
 });
 
@@ -125,14 +157,49 @@ btnFile.addEventListener('click', () => {
   audio.primeContext();
 });
 
-fileInput.addEventListener('change', async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  startHint.textContent = `Loading “${file.name}”…`;
-  try {
-    await audio.startFile(file);
-    startVisualizer();
-  } catch (err) {
-    startHint.textContent = `❌ ${err.message}`;
+// The file button is a <label>; make it reachable and operable by keyboard.
+btnFile.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    audio.primeContext();
+    fileInput.click();
   }
+});
+
+async function loadFile(file) {
+  if (!file) return;
+  notify(`Loading “${file.name}”…`);
+  try {
+    if (!(await audio.startFile(file))) return; // superseded by a newer pick
+    const firstTrack = !running;
+    startVisualizer();
+    notify(firstTrack ? 'Drop another audio file anytime to switch tracks' : `Now playing “${file.name}”`);
+  } catch (err) {
+    notify(`❌ Couldn't play “${file.name}”: ${err.message}`);
+  }
+}
+
+fileInput.addEventListener('change', (e) => loadFile(e.target.files?.[0]));
+
+// Drag & drop an audio file anywhere — on the start screen or mid-session to
+// switch tracks (AudioEngine tears down the previous source on re-init).
+window.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  document.body.classList.add('dragging');
+});
+window.addEventListener('dragleave', (e) => {
+  if (!e.relatedTarget) document.body.classList.remove('dragging');
+});
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
+  document.body.classList.remove('dragging');
+  // An empty type means the OS didn't recognise the extension; let the
+  // decoder decide rather than rejecting a playable file.
+  const file = [...(e.dataTransfer?.files ?? [])].find((f) => f.type === '' || f.type.startsWith('audio/'));
+  if (!file) {
+    notify('❌ That doesn\'t look like an audio file');
+    return;
+  }
+  audio.primeContext();
+  loadFile(file);
 });
