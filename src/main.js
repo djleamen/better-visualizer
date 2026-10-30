@@ -133,15 +133,22 @@ btnMic.addEventListener('click', async () => {
   audio.primeContext();
   const label = btnMic.innerHTML;
   btnMic.textContent = 'Connecting…';
+  // Disable while the permission prompt is open so an overlapping click can't
+  // capture "Connecting…" as the label to restore, and so the label is always
+  // restored (including when the request is superseded by a newer pick).
+  btnMic.disabled = true;
   try {
-    if (!(await audio.startMic())) return; // superseded by a newer pick
-    startVisualizer();
+    if (await audio.startMic()) startVisualizer();
+    // A false result means a newer pick superseded this one and is handling
+    // the UI; just fall through to restore the button below.
   } catch (err) {
     // Keep the user on the start screen with a reason instead of reloading.
-    btnMic.innerHTML = label;
     startHint.textContent = err.name === 'NotAllowedError'
       ? '❌ Microphone access was blocked — allow it in your browser and try again.'
       : `❌ ${err.message}`;
+  } finally {
+    btnMic.innerHTML = label;
+    btnMic.disabled = false;
   }
 });
 
