@@ -69,12 +69,23 @@ export class AudioEngine {
     }
   }
 
+  /**
+   * Request the microphone and play it. Resolves false (and changes nothing)
+   * if a newer startFile/startMic call began while the permission prompt was
+   * open, so granting mic access late can't replace the track the user picked
+   * after it. The superseded mic stream is stopped so the mic isn't left live.
+   */
   async startMic() {
     this.primeContext();
-    this._loadGen = (this._loadGen ?? 0) + 1; // supersedes any file still decoding
+    const gen = this._loadGen = (this._loadGen ?? 0) + 1; // supersedes any file still decoding
     await this.ctx.resume();
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    if (gen !== this._loadGen) {
+      for (const track of stream.getTracks()) track.stop();
+      return false;
+    }
     this._initFromStream(stream);
+    return true;
   }
 
   /**

@@ -117,8 +117,13 @@ function startVisualizer() {
   lastTime = performance.now();
 
   startScreen.classList.add('hidden');
+  // `.hidden` only fades it out; make it inert so its controls (the Audio File
+  // label is focusable) leave the tab order and can't be focused invisibly.
+  startScreen.inert = true;
   hud.classList.add('visible');
   setHudExpanded(false);
+  // Move focus off the now-hidden start screen onto a visible control.
+  hudToggle?.focus();
 
   requestAnimationFrame(loop);
 }
@@ -129,7 +134,7 @@ btnMic.addEventListener('click', async () => {
   const label = btnMic.innerHTML;
   btnMic.textContent = 'Connecting…';
   try {
-    await audio.startMic();
+    if (!(await audio.startMic())) return; // superseded by a newer pick
     startVisualizer();
   } catch (err) {
     // Keep the user on the start screen with a reason instead of reloading.
