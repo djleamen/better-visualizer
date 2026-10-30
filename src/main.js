@@ -23,6 +23,7 @@ const btnMic      = document.getElementById('btn-mic');
 const btnFile     = document.getElementById('btn-file');
 const fileInput   = document.getElementById('file-input');
 const startHint   = document.getElementById('start-hint');
+const toast       = document.getElementById('toast');
 
 /* ── Subsystems ──────────────────────────────────────────────── */
 const audio     = new AudioEngine();
@@ -96,7 +97,22 @@ function updateHUD(state) {
 }
 
 /* ── Start ───────────────────────────────────────────────────── */
+// The start-screen hint is invisible once playback starts; mid-session
+// messages go to a transient toast instead.
+let toastTimer = 0;
+function notify(message) {
+  if (!running) {
+    startHint.textContent = message;
+    return;
+  }
+  toast.textContent = message;
+  toast.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 4000);
+}
+
 function startVisualizer() {
+  if (running) return; // switching tracks reuses the loop already running
   running  = true;
   lastTime = performance.now();
 
@@ -140,13 +156,14 @@ btnFile.addEventListener('keydown', (e) => {
 
 async function loadFile(file) {
   if (!file) return;
-  startHint.textContent = `Loading “${file.name}”…`;
+  notify(`Loading “${file.name}”…`);
   try {
-    await audio.startFile(file);
+    if (!(await audio.startFile(file))) return; // superseded by a newer pick
+    const firstTrack = !running;
     startVisualizer();
-    startHint.textContent = 'Drop another audio file anytime to switch tracks';
+    notify(firstTrack ? 'Drop another audio file anytime to switch tracks' : `Now playing “${file.name}”`);
   } catch (err) {
-    startHint.textContent = `❌ Couldn't play “${file.name}”: ${err.message}`;
+    notify(`❌ Couldn't play “${file.name}”: ${err.message}`);
   }
 }
 
@@ -164,9 +181,11 @@ window.addEventListener('dragleave', (e) => {
 window.addEventListener('drop', (e) => {
   e.preventDefault();
   document.body.classList.remove('dragging');
-  const file = [...(e.dataTransfer?.files ?? [])].find((f) => f.type.startsWith('audio/'));
+  // An empty type means the OS didn't recognise the extension; let the
+  // decoder decide rather than rejecting a playable file.
+  const file = [...(e.dataTransfer?.files ?? [])].find((f) => f.type === '' || f.type.startsWith('audio/'));
   if (!file) {
-    startHint.textContent = '❌ That doesn\'t look like an audio file';
+    notify('❌ That doesn\'t look like an audio file');
     return;
   }
   audio.primeContext();
